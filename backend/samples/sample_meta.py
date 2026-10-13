@@ -1,0 +1,91 @@
+"""
+Detailed metadata, CWE/CVE mappings, and rationales for seeded demo vulnerabilities.
+"""
+
+DEMO_VULNERABILITIES = [
+    {
+        "rule_id": "SEC-001",
+        "category": "secrets",
+        "title": "Hardcoded Cloud / Database Credentials",
+        "cwe_id": "CWE-798",
+        "cve_id": "CVE-2022-21703",
+        "cve_references": "https://nvd.nist.gov/vuln/detail/CVE-2022-21703\nhttps://cwe.mitre.org/data/definitions/798.html",
+        "severity": "Critical",
+        "numeric_score": 9.1,
+        "severity_rationale": "Hardcoded AWS secret key exposed directly in plaintext source code allows persistent unauthorized cloud resource access and lateral credential harvesting.",
+        "description": "Hardcoded cryptographic keys and credentials detected in static variable assignment. Attackers inspecting the repository or compiled artifacts can extract these tokens to compromise backend infrastructure.",
+        "line_start": 13,
+        "line_end": 14,
+        "code_snippet": 'DB_ADMIN_KEY = "AKIA_SHADOW_CODE_DEMO_SECRET_KEY_99214A"\nDATABASE_URI = "sqlite:///production_customers.db"',
+        "suggested_patch": 'DB_ADMIN_KEY = os.environ.get("DB_ADMIN_KEY", "")\nDATABASE_URI = os.environ.get("DATABASE_URI", "sqlite:///production_customers.db")',
+        "explanation": "Externalize sensitive secrets into environment variables or dedicated secret management systems (e.g. AWS Secrets Manager, HashiCorp Vault)."
+    },
+    {
+        "rule_id": "SEC-002",
+        "category": "injection",
+        "title": "SQL Injection via Unsanitized String Formatting",
+        "cwe_id": "CWE-89",
+        "cve_id": "CVE-2022-34265",
+        "cve_references": "https://nvd.nist.gov/vuln/detail/CVE-2022-34265\nhttps://owasp.org/www-community/attacks/SQL_Injection",
+        "severity": "Critical",
+        "numeric_score": 9.8,
+        "severity_rationale": "Direct string interpolation of untrusted input into SQL queries enables remote attackers to manipulate query syntax, exfiltrate table data, or achieve administrative privilege bypass.",
+        "description": "SQL statement dynamically constructed using f-string concatenation with user_input_id parameter. Allows SQL syntax injection (e.g. ' OR 1=1 --) to read or modify arbitrary database records.",
+        "line_start": 23,
+        "line_end": 24,
+        "code_snippet": 'query = f"SELECT id, username, email, role, secret_note FROM accounts WHERE id = \'{user_input_id}\'"\ncursor.execute(query)',
+        "suggested_patch": 'query = "SELECT id, username, email, role, secret_note FROM accounts WHERE id = ?"\ncursor.execute(query, (user_input_id,))',
+        "explanation": "Use parameterized queries or prepared statements with placeholder binds ('?') to strictly separate SQL command structure from user data."
+    },
+    {
+        "rule_id": "SEC-003",
+        "category": "command_injection",
+        "title": "OS Command Injection via Shell Subprocess Execution",
+        "cwe_id": "CWE-78",
+        "cve_id": "CVE-2023-38606",
+        "cve_references": "https://nvd.nist.gov/vuln/detail/CVE-2023-38606\nhttps://cwe.mitre.org/data/definitions/78.html",
+        "severity": "High",
+        "numeric_score": 8.6,
+        "severity_rationale": "Executing system shell commands with shell=True on untrusted parameters permits command chaining operators (; | &&) and arbitrary code execution under the host process privileges.",
+        "description": "subprocess.check_output called with shell=True and user-controlled target_host argument without input sanitization or command escaping.",
+        "line_start": 30,
+        "line_end": 31,
+        "code_snippet": 'command = f"ping -c 2 {target_host}"\noutput = subprocess.check_output(command, shell=True, text=True)',
+        "suggested_patch": 'command = ["ping", "-c", "2", target_host]\noutput = subprocess.check_output(command, shell=False, text=True)',
+        "explanation": "Pass command arguments as an explicit array with shell=False, and validate IP addresses or hostnames with strict type parsing before invocation."
+    },
+    {
+        "rule_id": "SEC-004",
+        "category": "business_logic",
+        "title": "Broken Object Level Authorization (BOLA / IDOR)",
+        "cwe_id": "CWE-639",
+        "cve_id": "CVE-2023-26145",
+        "cve_references": "https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/\nhttps://cwe.mitre.org/data/definitions/639.html",
+        "severity": "High",
+        "numeric_score": 8.2,
+        "severity_rationale": "Missing authorization gate in state-modifying business logic allows any caller who knows or guesses a target account ID to manipulate other users' financial balances.",
+        "description": "Method update_account_balance modifies account balance records without verifying caller permissions or role ownership over the target account identifier.",
+        "line_start": 38,
+        "line_end": 42,
+        "code_snippet": 'cursor.execute(\n    "UPDATE accounts SET balance = ? WHERE id = ?",\n    (new_balance, target_account_id)\n)',
+        "suggested_patch": 'cursor.execute("SELECT role FROM users WHERE id = ?", (actor_user_id,))\nactor = cursor.fetchone()\nif not actor or actor[0] not in ("admin", "finance_officer"):\n    raise PermissionError("Access Denied: Actor lacks necessary authorization")\ncursor.execute("UPDATE accounts SET balance = ? WHERE id = ?", (new_balance, target_account_id))',
+        "explanation": "Enforce explicit server-side role-based or attribute-based authorization checks verifying that the requesting actor has privileges to mutate the target object."
+    },
+    {
+        "rule_id": "SEC-005",
+        "category": "cryptography",
+        "title": "Insecure Cryptographic Hash Function (MD5)",
+        "cwe_id": "CWE-327",
+        "cve_id": "CVE-2021-4209",
+        "cve_references": "https://cwe.mitre.org/data/definitions/327.html\nhttps://nvd.nist.gov/vuln/detail/CVE-2021-4209",
+        "severity": "Medium",
+        "numeric_score": 6.5,
+        "severity_rationale": "MD5 suffers from well-documented collision vulnerabilities and extreme speed on modern GPUs, making unsalted password hashes trivial to reverse via rainbow tables.",
+        "description": "hashlib.md5 used to hash user passwords without cryptographic salting or iteration stretching.",
+        "line_start": 17,
+        "line_end": 18,
+        "code_snippet": 'return hashlib.md5(password.encode()).hexdigest()',
+        "suggested_patch": 'salt = secrets.token_hex(16)\nkey = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100000)\nreturn f"{salt}:{key.hex()}"',
+        "explanation": "Adopt modern password hashing algorithms with adaptive computational cost and unique salts, such as PBKDF2, Argon2, or bcrypt."
+    }
+]

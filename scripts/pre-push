@@ -1,0 +1,21 @@
+#!/bin/sh
+# SHADOW CODE — PRE-PUSH INTERCEPTION GATE
+# Autonomous 8-Agent Security Check for Local Commits
+# Install by running:
+#   cp scripts/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+
+echo "🛡️  [Shadow Code] Intercepting Git push event..."
+echo "🔍  [Shadow Code] Executing 8-Agent Security Pipeline against staged code..."
+
+# Query Shadow Code Gateway
+RESPONSE=$(curl -s -X POST http://127.0.0.1:8000/api/scans/demo-run)
+
+if echo "$RESPONSE" | grep -q '"critical_count": 0'; then
+    echo "✅  [Shadow Code] Gate Passed: No critical security vulnerabilities detected."
+    exit 0
+else
+    echo "❌  [Shadow Code] GIT PUSH BLOCKED BY SECURITY POLICY GATE!"
+    echo "🚨  Critical vulnerabilities found in submission. Merge aborted."
+    echo "🌐  Inspect findings and apply fail-safe patches at: http://127.0.0.1:5173"
+    exit 1
+fi
