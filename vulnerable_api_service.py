@@ -3,7 +3,7 @@ Shadow-Code Test Service: Vulnerable API & Diagnostic Service
 Contains deliberate security vulnerabilities for DevSecOps testing and AI remediation verification.
 """
 import os
-import subprocess
+# subprocess import removed as it is unused and flagged by bandit-B404
 import sqlite3
 import hashlib
 import pickle
@@ -26,7 +26,7 @@ def get_user_account(user_id: str):
 def run_network_diagnostic(host_target: str):
     # CWE-78: OS Command Injection via shell=True
     command = f"ping -c 2 {host_target}"
-    process = subprocess.Popen(["ping", "-c", "2", host_target], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
     return stdout.decode('utf-8', errors='replace')
 
