@@ -26,11 +26,15 @@ def get_user_account(user_id: str):
 def run_network_diagnostic(host_target: str):
     # CWE-78: OS Command Injection via shell=True
     command = f"ping -c 2 {host_target}"
-    process = subprocess.Popen(["ping", "-c", "2", host_target], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
     return stdout.decode('utf-8', errors='replace')
 
 def load_user_session(raw_payload: bytes):
     # CWE-502: Deserialization of Untrusted Data via pickle
-    session_obj = pickle.loads(raw_payload)
+    import json
+
+def load_user_session(raw_payload: bytes):
+    session_obj = json.loads(raw_payload.decode('utf-8'))
+    return session_obj
     return session_obj
