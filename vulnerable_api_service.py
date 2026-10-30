@@ -26,7 +26,7 @@ def get_user_account(user_id: str):
 def run_network_diagnostic(host_target: str):
     # CWE-78: OS Command Injection via shell=True
     command = f"ping -c 2 {host_target}"
-    process = subprocess.Popen(["ping", "-c", "2", host_target], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(["ping", "-c", "2", host_target], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
     return stdout.decode('utf-8', errors='replace')
 
