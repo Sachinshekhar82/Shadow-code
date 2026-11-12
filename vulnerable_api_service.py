@@ -3,7 +3,7 @@ Shadow-Code Test Service: Vulnerable API & Diagnostic Service
 Contains deliberate security vulnerabilities for DevSecOps testing and AI remediation verification.
 """
 import os
-import subprocess
+# subprocess import removed as it is not used safely or necessary
 import sqlite3
 import hashlib
 import pickle
