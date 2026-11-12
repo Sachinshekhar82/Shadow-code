@@ -4,21 +4,21 @@ import { Sidebar, NavTab } from './components/Sidebar';
 import { DashboardPage } from './pages/DashboardPage';
 import { ScannerPage } from './pages/ScannerPage';
 import { FindingsPage } from './pages/FindingsPage';
-import { PipelinePage } from './pages/PipelinePage';
 import { RemediationPage } from './pages/RemediationPage';
 import { RepositoriesPage } from './pages/RepositoriesPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { FeedbackPage } from './pages/FeedbackPage';
-import { SettingsPage } from './pages/SettingsPage';
+import { ChatbotPage } from './pages/ChatbotPage';
+import { PullRequestsPage } from './pages/PullRequestsPage';
 import { FindingModal } from './components/FindingModal';
-import { Scan, Finding, Repository, SystemStatus } from './types';
+import { Scan, Finding, Repository } from './types';
 import {
   fetchScans,
   fetchFindings,
   fetchRepositories,
-  fetchSystemStatus,
-  runDemoScan,
+  fetchHealth,
+  triggerScan,
   submitFindingFeedback
 } from './services/api';
 
@@ -27,7 +27,7 @@ export function App() {
   const [scans, setScans] = useState<Scan[]>([]);
   const [findings, setFindings] = useState<Finding[]>([]);
   const [repositories, setRepositories] = useState<Repository[]>([]);
-  const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
+  const [systemStatus, setSystemStatus] = useState<any>(null);
 
   const [selectedScan, setSelectedScan] = useState<Scan | null>(null);
   const [selectedFindingForModal, setSelectedFindingForModal] = useState<Finding | null>(null);
@@ -36,20 +36,20 @@ export function App() {
   const [isRunningDemo, setIsRunningDemo] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
 
-  // Load all initial data
+  // Load all initial data from backend API
   const refreshData = async () => {
     try {
-      const [scansData, findingsData, reposData, statusData] = await Promise.all([
+      const [scansData, findingsData, reposData, healthData] = await Promise.all([
         fetchScans().catch(() => []),
         fetchFindings().catch(() => []),
         fetchRepositories().catch(() => []),
-        fetchSystemStatus().catch(() => null),
+        fetchHealth().catch(() => null),
       ]);
 
       setScans(scansData);
       setFindings(findingsData);
       setRepositories(reposData);
-      setSystemStatus(statusData);
+      setSystemStatus(healthData);
 
       if (scansData.length > 0 && !selectedScan) {
         setSelectedScan(scansData[0]);
@@ -65,24 +65,24 @@ export function App() {
     refreshData();
   }, []);
 
-  // One-click demo scan
+  // Quick action scan
   const handleRunDemo = async () => {
     setIsRunningDemo(true);
     try {
-      const newScan = await runDemoScan();
+      const repoId = repositories[0]?.id || 'repo-shadow-code';
+      const newScan = await triggerScan({
+        repository_id: repoId,
+        branch: 'main',
+        trigger: 'dashboard_action'
+      });
       setSelectedScan(newScan);
       await refreshData();
       setActiveTab('scanner');
-    } catch (err) {
-      alert('Failed to run demo scan: ' + (err as any).message);
+    } catch (err: any) {
+      alert('Failed to execute scan: ' + (err.message || 'Error'));
     } finally {
       setIsRunningDemo(false);
     }
-  };
-
-  const handleFeedback = async (findingId: string, decision: string, reason: string) => {
-    await submitFindingFeedback(findingId, decision, reason);
-    await refreshData();
   };
 
   const handleNavigateToRemediation = (finding: Finding) => {
@@ -90,16 +90,16 @@ export function App() {
     setActiveTab('remediation');
   };
 
-  const openFindingsCount = findings.filter(f => f.status === 'open').length;
+  const openFindingsCount = findings.filter(f => f.remediation_status === 'open' || (f as any).status === 'open').length;
 
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-200 flex flex-col font-sans cyber-grid selection:bg-cyan-500 selection:text-black">
+    <div className="min-h-screen bg-[#0B1120] text-[#F8FAFC] flex flex-col font-sans selection:bg-cyan-500/20 selection:text-white">
       {/* Top Navbar */}
       <Navbar
         status={systemStatus}
         onRunDemo={handleRunDemo}
         isRunningDemo={isRunningDemo}
-        activeRepoName={repositories[0]?.name || 'Shadow-code'}
+        activeRepoName={repositories[0]?.name || 'Sachinshekhar82/Shadow-code'}
       />
 
       {/* Main Container */}
@@ -130,11 +130,11 @@ export function App() {
 
           {activeTab === 'scanner' && (
             <ScannerPage
-              onScanCompleted={(s) => {
+              onScanCompleted={(s: any) => {
                 setSelectedScan(s);
                 refreshData();
               }}
-              onOpenFinding={(f) => setSelectedFindingForModal(f)}
+              onOpenFinding={(f: any) => setSelectedFindingForModal(f)}
               onNavigateToRemediation={handleNavigateToRemediation}
             />
           )}
@@ -142,14 +142,13 @@ export function App() {
           {activeTab === 'findings' && (
             <FindingsPage
               findings={findings}
-              onOpenFinding={(f) => setSelectedFindingForModal(f)}
+              onOpenFinding={(f: any) => setSelectedFindingForModal(f)}
               onNavigateToRemediation={handleNavigateToRemediation}
-              onFeedback={handleFeedback}
+              onFeedback={async (id, decision, reason) => {
+                await submitFindingFeedback(id, decision, reason);
+                refreshData();
+              }}
             />
-          )}
-
-          {activeTab === 'pipeline' && (
-            <PipelinePage scan={selectedScan || scans[0] || null} />
           )}
 
           {activeTab === 'remediation' && (
@@ -158,6 +157,14 @@ export function App() {
               selectedFinding={selectedFindingForRemediation}
               onRefreshFindings={refreshData}
             />
+          )}
+
+          {activeTab === 'pull_requests' && (
+            <PullRequestsPage />
+          )}
+
+          {activeTab === 'chatbot' && (
+            <ChatbotPage />
           )}
 
           {activeTab === 'repositories' && (
@@ -185,18 +192,17 @@ export function App() {
           {activeTab === 'feedback' && (
             <FeedbackPage />
           )}
-
-          {activeTab === 'settings' && (
-            <SettingsPage status={systemStatus} />
-          )}
         </main>
       </div>
 
-      {/* Modal for detailed finding view & feedback */}
+      {/* Modal for detailed finding view */}
       <FindingModal
         finding={selectedFindingForModal}
         onClose={() => setSelectedFindingForModal(null)}
-        onFeedback={handleFeedback}
+        onFeedback={async (id, decision, reason) => {
+          await submitFindingFeedback(id, decision, reason);
+          refreshData();
+        }}
         onNavigateToRemediation={handleNavigateToRemediation}
       />
     </div>

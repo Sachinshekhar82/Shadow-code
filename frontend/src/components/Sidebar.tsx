@@ -1,30 +1,29 @@
 import React from 'react';
 import {
   LayoutDashboard,
+  GitBranch,
   ShieldAlert,
   Bug,
-  Cpu,
   Wrench,
-  GitBranch,
+  GitPullRequest,
   FileText,
   History,
   Brain,
-  Settings,
-  ChevronRight,
-  Info
+  MessageSquare,
+  LucideIcon
 } from 'lucide-react';
 
 export type NavTab =
   | 'dashboard'
+  | 'repositories'
   | 'scanner'
   | 'findings'
-  | 'pipeline'
   | 'remediation'
-  | 'repositories'
+  | 'pull_requests'
   | 'reports'
   | 'history'
   | 'feedback'
-  | 'settings';
+  | 'chatbot';
 
 interface SidebarProps {
   activeTab: NavTab;
@@ -32,75 +31,111 @@ interface SidebarProps {
   openFindingsCount: number;
 }
 
+interface NavItemConfig {
+  id: NavTab;
+  label: string;
+  icon: LucideIcon;
+  badge?: string;
+  count?: number;
+}
+
+interface NavGroup {
+  title: string;
+  items: NavItemConfig[];
+}
+
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onSelectTab,
   openFindingsCount
 }) => {
-  const navItems = [
-    { id: 'dashboard', label: 'Overview Dashboard', icon: LayoutDashboard },
-    { id: 'scanner', label: 'Security Scanner', icon: ShieldAlert, badge: 'Live' },
-    { id: 'findings', label: 'Findings Explorer', icon: Bug, count: openFindingsCount },
-    { id: 'pipeline', label: '8-Agent Pipeline', icon: Cpu },
-    { id: 'remediation', label: 'Remediation Workspace', icon: Wrench },
-    { id: 'repositories', label: 'GitHub Repositories', icon: GitBranch },
-    { id: 'reports', label: 'Audit Reports', icon: FileText },
-    { id: 'history', label: 'Scan History & Logs', icon: History },
-    { id: 'feedback', label: 'Adaptive Feedback', icon: Brain },
-    { id: 'settings', label: 'Architecture & About', icon: Info },
+  const groups: NavGroup[] = [
+    {
+      title: 'WORKSPACE',
+      items: [
+        { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
+        { id: 'repositories', label: 'Repositories', icon: GitBranch },
+        { id: 'scanner', label: 'Security Audits', icon: ShieldAlert, badge: 'Live' },
+      ]
+    },
+    {
+      title: 'SECURITY',
+      items: [
+        { id: 'findings', label: 'Vulnerabilities', icon: Bug, count: openFindingsCount },
+        { id: 'remediation', label: 'AI Remediation', icon: Wrench },
+        { id: 'pull_requests', label: 'Pull Requests', icon: GitPullRequest },
+      ]
+    },
+    {
+      title: 'INSIGHTS',
+      items: [
+        { id: 'reports', label: 'Audit Reports', icon: FileText },
+        { id: 'history', label: 'Scan History', icon: History },
+        { id: 'feedback', label: 'Adaptive Feedback', icon: Brain },
+      ]
+    },
+    {
+      title: 'SYSTEM',
+      items: [
+        { id: 'chatbot', label: 'Security Chatbot', icon: MessageSquare, badge: 'AI' },
+      ]
+    }
   ];
 
   return (
-    <aside className="w-64 border-r border-cyber-border bg-[#090d18] flex flex-col justify-between select-none">
-      <div className="p-4 space-y-1">
-        <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-          Core Auditing Suite
-        </div>
+    <aside className="w-64 border-r border-[#263449] bg-[#0D1422] flex flex-col justify-between select-none">
+      <div className="py-4 px-3 space-y-6 overflow-y-auto">
+        {groups.map((group) => (
+          <div key={group.title} className="space-y-1">
+            <div className="px-3 pb-1 text-[11px] font-semibold tracking-wider text-[#8190A8] uppercase">
+              {group.title}
+            </div>
 
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
+            {group.items.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
 
-          return (
-            <button
-              key={item.id}
-              onClick={() => onSelectTab(item.id as NavTab)}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
-                isActive
-                  ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shadow-sm'
-                  : 'text-cyber-muted hover:text-white hover:bg-slate-800/40'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <Icon className={`w-4 h-4 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
-                <span>{item.label}</span>
-              </div>
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onSelectTab(item.id)}
+                  className={`w-full relative flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                    isActive
+                      ? 'bg-[#162237] text-[#F8FAFC]'
+                      : 'text-[#A7B3C7] hover:text-[#F8FAFC] hover:bg-[#162237]/50'
+                  }`}
+                >
+                  {/* Subtle active left bar indicator */}
+                  {isActive && (
+                    <span className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-cyan-400 rounded-r" />
+                  )}
 
-              <div className="flex items-center gap-1.5">
-                {item.badge && (
-                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-cyan-900/60 text-cyan-300">
-                    {item.badge}
-                  </span>
-                )}
-                {item.count !== undefined && item.count > 0 && (
-                  <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">
-                    {item.count}
-                  </span>
-                )}
-                {isActive && <ChevronRight className="w-3.5 h-3.5 text-cyan-400" />}
-              </div>
-            </button>
-          );
-        })}
+                  <div className="flex items-center gap-3">
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-cyan-400' : 'text-[#8190A8]'}`} />
+                    <span>{item.label}</span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    {item.badge && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#111B2E] text-cyan-400 border border-[#263449] font-mono">
+                        {item.badge}
+                      </span>
+                    )}
+                    {typeof item.count === 'number' && item.count > 0 && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-950/80 text-red-300 border border-red-800/60 font-mono font-medium">
+                        {item.count}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </div>
 
-      {/* Attribution Card */}
-      <div className="p-4 border-t border-cyber-border/80 bg-[#070b14]/60">
-        <div className="p-3 rounded-lg bg-[#0e1627] border border-cyber-border/50 text-[11px] space-y-1">
-          <div className="font-semibold text-white">College Review Phase 2</div>
-          <div className="text-cyber-muted text-[10px]">Team: Sachin, Abhinav, Ikshit, Abhishek</div>
-          <div className="text-cyan-400 text-[10px]">Guide: Mr. Anitha R, DSATM</div>
-        </div>
+      <div className="p-3 border-t border-[#263449] text-center text-[11px] text-[#8190A8] font-mono">
+        Shadow-Code Security Platform
       </div>
     </aside>
   );

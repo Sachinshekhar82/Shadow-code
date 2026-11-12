@@ -3,26 +3,37 @@ import React from 'react';
 interface SeverityBadgeProps {
   severity: 'Critical' | 'High' | 'Medium' | 'Low' | string;
   score?: number;
+  size?: 'sm' | 'md';
 }
 
-export const SeverityBadge: React.FC<SeverityBadgeProps> = ({ severity, score }) => {
+export const SeverityBadge: React.FC<SeverityBadgeProps> = ({ severity, score, size = 'sm' }) => {
   const sevLower = severity.toLowerCase();
 
-  let colorClasses = 'bg-blue-500/10 text-blue-400 border-blue-500/30';
+  let badgeClasses = 'bg-slate-500/10 text-slate-300 border-slate-700/50';
+  let dotColor = 'bg-slate-400';
+
   if (sevLower === 'critical') {
-    colorClasses = 'bg-red-500/15 text-red-400 border-red-500/40 shadow-sm shadow-red-500/10';
+    badgeClasses = 'bg-red-500/10 text-red-300 border-red-500/30';
+    dotColor = 'bg-red-400';
   } else if (sevLower === 'high') {
-    colorClasses = 'bg-orange-500/15 text-orange-400 border-orange-500/40 shadow-sm shadow-orange-500/10';
+    badgeClasses = 'bg-orange-500/10 text-orange-300 border-orange-500/30';
+    dotColor = 'bg-orange-400';
   } else if (sevLower === 'medium') {
-    colorClasses = 'bg-amber-500/15 text-amber-400 border-amber-500/40';
+    badgeClasses = 'bg-amber-500/10 text-amber-300 border-amber-500/30';
+    dotColor = 'bg-amber-400';
+  } else if (sevLower === 'low') {
+    badgeClasses = 'bg-blue-500/10 text-blue-300 border-blue-500/30';
+    dotColor = 'bg-blue-400';
   }
 
+  const padding = size === 'sm' ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1 text-xs';
+
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${colorClasses}`}>
-      <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse"></span>
-      {severity}
+    <span className={`inline-flex items-center gap-1.5 rounded font-medium border font-mono tracking-wide ${padding} ${badgeClasses}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+      <span>{severity.toUpperCase()}</span>
       {score !== undefined && (
-        <span className="text-[10px] opacity-75 font-mono">({score.toFixed(1)})</span>
+        <span className="text-[10px] text-slate-400 font-mono">({score.toFixed(1)})</span>
       )}
     </span>
   );
@@ -31,22 +42,30 @@ export const SeverityBadge: React.FC<SeverityBadgeProps> = ({ severity, score })
 export const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const stLower = status.toLowerCase();
 
-  let styles = 'bg-slate-700/40 text-slate-300 border-slate-600/30';
-  if (stLower === 'completed' || stLower === 'resolved' || stLower === 'applied' || stLower === 'connected') {
-    styles = 'bg-emerald-500/15 text-emerald-400 border-emerald-500/40';
+  let styles = 'bg-slate-800 text-slate-300 border-slate-700/60';
+  let dotColor = 'bg-slate-400';
+
+  if (stLower === 'completed' || stLower === 'resolved' || stLower === 'applied' || stLower === 'connected' || stLower === 'passed') {
+    styles = 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30';
+    dotColor = 'bg-emerald-400';
   } else if (stLower === 'blocked' || stLower === 'failed' || stLower === 'validation_failed') {
-    styles = 'bg-rose-500/15 text-rose-400 border-rose-500/40';
-  } else if (stLower === 'running' || stLower === 'suggested') {
-    styles = 'bg-cyan-500/15 text-cyan-400 border-cyan-500/40';
-  } else if (stLower === 'overridden' || stLower === 'approved') {
-    styles = 'bg-amber-500/15 text-amber-400 border-amber-500/40';
-  } else if (stLower === 'false_positive') {
-    styles = 'bg-purple-500/15 text-purple-400 border-purple-500/40';
+    styles = 'bg-red-500/10 text-red-300 border-red-500/30';
+    dotColor = 'bg-red-400';
+  } else if (stLower === 'running' || stLower === 'in_progress') {
+    styles = 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30';
+    dotColor = 'bg-cyan-400 animate-pulse';
+  } else if (stLower === 'requires_human_review' || stLower === 'in_review' || stLower === 'pending') {
+    styles = 'bg-amber-500/10 text-amber-300 border-amber-500/30';
+    dotColor = 'bg-amber-400';
+  } else if (stLower === 'open') {
+    styles = 'bg-blue-500/10 text-blue-300 border-blue-500/30';
+    dotColor = 'bg-blue-400';
   }
 
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border uppercase tracking-wider ${styles}`}>
-      {status.replace('_', ' ')}
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-medium border uppercase tracking-wider ${styles}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+      <span>{status.replace(/_/g, ' ')}</span>
     </span>
   );
 };

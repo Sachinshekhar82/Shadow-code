@@ -4,16 +4,18 @@ import {
   Download,
   Printer,
   ShieldAlert,
-  CheckCircle2,
   AlertTriangle,
   Flame,
   Calendar,
   Clock,
-  ExternalLink
+  Loader2,
+  FileDown,
+  CheckCircle2
 } from 'lucide-react';
 import { Scan } from '../types';
 import { SeverityBadge, StatusBadge } from '../components/SeverityBadge';
-import { getScanReportDownloadUrl } from '../services/api';
+import { downloadReportFile } from '../services/api';
+import { PageHeader } from '../components/PageHeader';
 
 interface ReportsPageProps {
   scans: Scan[];
@@ -27,191 +29,215 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
   onSelectScan
 }) => {
   const activeScan = selectedScan || (scans.length > 0 ? scans[0] : null);
+  const [downloadingFormat, setDownloadingFormat] = useState<'pdf' | 'csv' | 'json' | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [downloadSuccess, setDownloadSuccess] = useState<string | null>(null);
 
   const handlePrint = () => {
     window.print();
   };
 
-  const handleDownloadJson = () => {
+  const handleDownload = async (format: 'pdf' | 'csv' | 'json') => {
     if (!activeScan) return;
-    window.open(getScanReportDownloadUrl(activeScan.id, 'json'), '_blank');
-  };
+    setDownloadingFormat(format);
+    setDownloadError(null);
+    setDownloadSuccess(null);
 
-  const handleDownloadCsv = () => {
-    if (!activeScan) return;
-    window.open(getScanReportDownloadUrl(activeScan.id, 'csv'), '_blank');
+    try {
+      await downloadReportFile(activeScan.id, format);
+      setDownloadSuccess(`Successfully downloaded shadow-code-audit-${activeScan.id}.${format}`);
+      setTimeout(() => setDownloadSuccess(null), 4000);
+    } catch (err: any) {
+      setDownloadError(err.message || `Failed to download ${format.toUpperCase()} report.`);
+    } finally {
+      setDownloadingFormat(null);
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <FileText className="w-5 h-5 text-cyan-400" />
-            Security Audit Reports & Compliance Export
-          </h1>
-          <p className="text-xs text-cyber-muted">
-            Formal, evidence-based security auditing reports with CVSS v3.1 rankings, NVD intelligence correlation, and remediation summaries.
-          </p>
-        </div>
+      {/* Page Header */}
+      <PageHeader
+        title="Audit Reports & Compliance Export"
+        subtitle="Formal evidence-based compliance reports with CVSS rankings, CWE threat mapping, and downloadable PDF, CSV, and JSON formats."
+        icon={FileText}
+        actions={
+          activeScan ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handlePrint}
+                className="px-3 py-1.5 rounded-lg bg-[#162237] hover:bg-[#1E2D4A] text-slate-200 text-xs font-medium border border-[#263449] transition-colors flex items-center gap-1.5"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print</span>
+              </button>
 
-        {activeScan && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handlePrint}
-              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-cyber-border transition-colors flex items-center gap-1.5"
-            >
-              <Printer className="w-3.5 h-3.5" /> Print Report
-            </button>
-            <button
-              onClick={handleDownloadCsv}
-              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-cyber-border transition-colors flex items-center gap-1.5"
-            >
-              <Download className="w-3.5 h-3.5 text-cyan-400" /> Export CSV
-            </button>
-            <button
-              onClick={handleDownloadJson}
-              className="px-3.5 py-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black text-xs font-bold transition-colors flex items-center gap-1.5"
-            >
-              <Download className="w-3.5 h-3.5" /> Export JSON
-            </button>
-          </div>
-        )}
-      </div>
+              {/* PDF Export */}
+              <button
+                onClick={() => handleDownload('pdf')}
+                disabled={downloadingFormat !== null}
+                className="px-3 py-1.5 rounded-lg bg-[#162237] hover:bg-[#1E2D4A] disabled:opacity-50 text-slate-200 text-xs font-medium border border-[#263449] transition-colors flex items-center gap-1.5"
+              >
+                {downloadingFormat === 'pdf' ? (
+                  <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
+                ) : (
+                  <FileDown className="w-3.5 h-3.5 text-red-400" />
+                )}
+                <span>Export PDF</span>
+              </button>
+
+              {/* CSV Export */}
+              <button
+                onClick={() => handleDownload('csv')}
+                disabled={downloadingFormat !== null}
+                className="px-3 py-1.5 rounded-lg bg-[#162237] hover:bg-[#1E2D4A] disabled:opacity-50 text-slate-200 text-xs font-medium border border-[#263449] transition-colors flex items-center gap-1.5"
+              >
+                {downloadingFormat === 'csv' ? (
+                  <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
+                ) : (
+                  <Download className="w-3.5 h-3.5 text-emerald-400" />
+                )}
+                <span>Export CSV</span>
+              </button>
+
+              {/* JSON Export */}
+              <button
+                onClick={() => handleDownload('json')}
+                disabled={downloadingFormat !== null}
+                className="px-3.5 py-1.5 rounded-lg bg-cyan-400 hover:bg-cyan-300 disabled:opacity-50 text-slate-950 text-xs font-semibold transition-colors flex items-center gap-1.5"
+              >
+                {downloadingFormat === 'json' ? (
+                  <Loader2 className="w-3.5 h-3.5 text-slate-950 animate-spin" />
+                ) : (
+                  <Download className="w-3.5 h-3.5" />
+                )}
+                <span>Export JSON</span>
+              </button>
+            </div>
+          ) : undefined
+        }
+      />
+
+      {/* Download Status Banners */}
+      {downloadError && (
+        <div className="p-3.5 rounded-lg bg-red-950/40 border border-red-800/40 text-red-300 text-xs flex items-center justify-between">
+          <span>{downloadError}</span>
+          <button onClick={() => setDownloadError(null)} className="text-red-400 hover:text-white ml-2 text-xs">✕</button>
+        </div>
+      )}
+
+      {downloadSuccess && (
+        <div className="p-3.5 rounded-lg bg-emerald-950/40 border border-emerald-800/40 text-emerald-300 text-xs flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{downloadSuccess}</span>
+        </div>
+      )}
 
       {!activeScan ? (
-        <div className="p-12 text-center text-xs text-cyber-muted rounded-xl bg-cyber-card border border-cyber-border">
-          No audit scans available to generate reports. Run a scan from the Security Scanner page first.
+        <div className="p-12 text-center text-xs text-[#8190A8] rounded-xl bg-[#111B2E] border border-[#263449]">
+          No audit scans available to generate reports. Run a scan from the Security Audits page first.
         </div>
       ) : (
         <div className="space-y-6">
           {/* Scan Selector if multiple */}
           {scans.length > 1 && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-cyber-card border border-cyber-border overflow-x-auto text-xs">
-              <span className="text-cyber-muted shrink-0">Select Scan:</span>
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-[#111B2E] border border-[#263449] overflow-x-auto text-xs">
+              <span className="text-[#8190A8] shrink-0 font-medium">Select Audit Run:</span>
               {scans.slice(0, 6).map((s) => (
                 <button
                   key={s.id}
                   onClick={() => onSelectScan(s)}
                   className={`px-3 py-1 rounded-md font-mono text-[11px] shrink-0 transition-colors ${
                     s.id === activeScan.id
-                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold'
-                      : 'bg-[#0e1628] text-slate-400 hover:text-white border border-cyber-border'
+                      ? 'bg-[#162237] text-[#F8FAFC] border border-cyan-400 font-bold'
+                      : 'bg-[#0E1628] text-slate-400 hover:text-white border border-[#263449]'
                   }`}
                 >
-                  {s.filename} ({s.id.substring(0, 6)})
+                  {s.id} ({new Date(s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
                 </button>
               ))}
             </div>
           )}
 
-          {/* Report Document Card */}
-          <div className="p-8 rounded-xl bg-cyber-card border border-cyber-border space-y-8 shadow-2xl print:bg-white print:text-black">
+          {/* Report Document Sheet */}
+          <div className="p-8 rounded-xl bg-[#111B2E] border border-[#263449] space-y-6 text-slate-200">
             {/* Report Header */}
-            <div className="border-b border-cyber-border pb-6 flex flex-col md:flex-row md:items-start justify-between gap-4">
+            <div className="pb-6 border-b border-[#263449] flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <div className="text-xs font-mono text-cyan-400 uppercase tracking-widest font-bold mb-1">
-                  SHADOW CODE SECURITY AUDIT REPORT
-                </div>
-                <h2 className="text-2xl font-extrabold text-white">
-                  Target Assessment: {activeScan.filename}
+                <span className="text-[11px] font-mono text-cyan-400 uppercase tracking-widest font-semibold block mb-1">
+                  OFFICIAL AUDIT REPORT
+                </span>
+                <h2 className="text-xl font-bold text-[#F8FAFC]">
+                  Shadow-Code Autonomous SDLC Security Assessment
                 </h2>
-                <div className="text-xs text-cyber-muted mt-1 space-x-3">
-                  <span>Author: <strong className="text-slate-300">{activeScan.author}</strong></span>
-                  <span>•</span>
-                  <span>Branch: <strong className="text-cyan-400 font-mono">{activeScan.branch}</strong></span>
-                  <span>•</span>
-                  <span>Scan Mode: <strong className="text-slate-300 capitalize">{activeScan.scan_mode}</strong></span>
-                </div>
+                <p className="text-xs text-[#A7B3C7] mt-0.5 font-mono">
+                  Report ID: {activeScan.id} • Target Branch: {activeScan.branch || 'main'}
+                </p>
               </div>
 
-              <div className="text-right space-y-1">
-                <StatusBadge status={activeScan.status} />
-                <div className="text-[11px] text-cyber-muted font-mono">
-                  {new Date(activeScan.created_at).toLocaleString()}
+              <div className="flex items-center gap-4 text-xs font-mono text-[#A7B3C7]">
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>{new Date(activeScan.created_at).toLocaleDateString()}</span>
                 </div>
-                <div className="text-[10px] text-slate-500 font-mono">
-                  Scan ID: {activeScan.id}
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Duration: {activeScan.duration_seconds}s</span>
                 </div>
               </div>
             </div>
 
             {/* Executive Summary Metrics */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="p-4 rounded-lg bg-[#0e1628] border border-cyber-border/60 text-center">
-                <span className="text-[10px] uppercase font-bold text-cyber-muted block">Total Issues</span>
-                <span className="text-2xl font-mono font-bold text-white">{activeScan.total_findings}</span>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="p-3.5 rounded-lg bg-[#0E1628] border border-[#263449]">
+                <span className="text-[11px] text-[#8190A8] uppercase font-medium block">Total Findings</span>
+                <span className="text-xl font-bold text-[#F8FAFC] mt-0.5 block">{activeScan.total_findings}</span>
               </div>
-              <div className="p-4 rounded-lg bg-[#0e1628] border border-red-500/20 text-center">
-                <span className="text-[10px] uppercase font-bold text-red-400 block">Critical</span>
-                <span className="text-2xl font-mono font-bold text-red-400">{activeScan.critical_count}</span>
+              <div className="p-3.5 rounded-lg bg-[#0E1628] border border-[#263449]">
+                <span className="text-[11px] text-red-400 uppercase font-medium block">Critical Severity</span>
+                <span className="text-xl font-bold text-red-400 mt-0.5 block">{activeScan.critical_count}</span>
               </div>
-              <div className="p-4 rounded-lg bg-[#0e1628] border border-orange-500/20 text-center">
-                <span className="text-[10px] uppercase font-bold text-orange-400 block">High</span>
-                <span className="text-2xl font-mono font-bold text-orange-400">{activeScan.high_count}</span>
+              <div className="p-3.5 rounded-lg bg-[#0E1628] border border-[#263449]">
+                <span className="text-[11px] text-orange-400 uppercase font-medium block">High Severity</span>
+                <span className="text-xl font-bold text-orange-400 mt-0.5 block">{activeScan.high_count}</span>
               </div>
-              <div className="p-4 rounded-lg bg-[#0e1628] border border-amber-500/20 text-center">
-                <span className="text-[10px] uppercase font-bold text-amber-400 block">Medium / Low</span>
-                <span className="text-2xl font-mono font-bold text-amber-400">{activeScan.medium_count + activeScan.low_count}</span>
+              <div className="p-3.5 rounded-lg bg-[#0E1628] border border-[#263449]">
+                <span className="text-[11px] text-amber-400 uppercase font-medium block">Medium Severity</span>
+                <span className="text-xl font-bold text-amber-400 mt-0.5 block">{activeScan.medium_count}</span>
               </div>
             </div>
 
-            {/* Findings Inventory */}
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-white border-b border-cyber-border pb-2">
-                Detailed Vulnerability Inventory
+            {/* Findings Detail List */}
+            <div className="space-y-3 pt-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#F8FAFC]">
+                Enumerated Security Findings ({activeScan.findings?.length || 0})
               </h3>
 
-              <div className="space-y-4">
-                {activeScan.findings.map((f, i) => (
-                  <div
-                    key={f.id}
-                    className="p-5 rounded-lg bg-[#0b1222] border border-cyber-border space-y-3"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="space-y-2.5">
+                {activeScan.findings && activeScan.findings.map((f, i) => (
+                  <div key={i} className="p-4 rounded-lg bg-[#0E1628] border border-[#263449] space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-slate-500">#{i + 1}</span>
-                        <SeverityBadge severity={f.severity} score={f.numeric_score} />
-                        <span className="font-mono text-xs font-bold text-cyan-400">{f.rule_id}</span>
-                        <h4 className="text-sm font-bold text-white">{f.title}</h4>
+                        <SeverityBadge severity={f.severity} />
+                        <span className="font-semibold text-white text-xs">{f.title}</span>
                       </div>
-                      <div className="text-xs text-cyber-muted font-mono">
-                        Line {f.line_start} - {f.line_end}
-                      </div>
+                      <span className="font-mono text-[11px] text-[#A7B3C7]">
+                        {f.file_path}:{f.line_start}
+                      </span>
                     </div>
 
-                    <p className="text-xs text-slate-300 leading-relaxed">
+                    <p className="text-xs text-[#A7B3C7] leading-relaxed">
                       {f.description}
                     </p>
 
-                    <div className="p-3 rounded bg-[#070b14] border border-cyber-border font-mono text-xs text-red-300 overflow-x-auto">
-                      <code>{f.code_snippet}</code>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs pt-1">
-                      <div>
-                        <span className="text-cyber-muted font-semibold block text-[10px] uppercase">CVSS Calculation Vector:</span>
-                        <span className="text-slate-300 font-mono text-[11px]">{f.severity_rationale || 'Score calibrated against CVSS 3.1'}</span>
-                      </div>
-                      <div>
-                        <span className="text-cyber-muted font-semibold block text-[10px] uppercase">Threat Intel Benchmark:</span>
-                        <span className="text-amber-400 font-mono text-[11px]">
-                          {f.cve_id ? `${f.cve_id} (${f.cwe_id})` : f.cwe_id || 'CWE Generic'}
-                        </span>
-                      </div>
+                    <div className="pt-2 border-t border-[#263449]/70 flex flex-wrap gap-4 text-[11px] text-[#8190A8] font-mono">
+                      <span>Rule: <strong className="text-slate-300">{f.rule_id}</strong></span>
+                      <span>Engine: <strong className="text-slate-300 capitalize">{f.scanner}</strong></span>
+                      <span>Classification: <strong className="text-cyan-300">{f.cwe_id || 'CWE'}</strong></span>
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* Academic Attribution Footer */}
-            <div className="pt-6 border-t border-cyber-border text-center text-xs text-cyber-muted space-y-1">
-              <div>Institution: Dayananda Sagar Academy of Technology & Management (Autonomous Institute under VTU)</div>
-              <div>Department of CSE–Cyber Security • 7th Semester Project Phase 2</div>
-              <div className="text-[11px] text-cyan-400">Project Team: Sachin Shekhar (1DT23CY040), Abhinav Raj (1DT23CY002), Ikshit Sinha (1DT23CY022), Abhishek Anand (1DT23CY003)</div>
-              <div className="text-[11px]">Project Guide: Mr. Anitha R, Associate Professor</div>
             </div>
           </div>
         </div>

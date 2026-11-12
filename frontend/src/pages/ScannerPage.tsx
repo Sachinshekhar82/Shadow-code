@@ -11,11 +11,13 @@ import {
   Shield,
   Layers,
   Terminal,
-  Cpu
+  Cpu,
+  ArrowRight
 } from 'lucide-react';
 import { Scan, Finding } from '../types';
 import { SeverityBadge, StatusBadge } from '../components/SeverityBadge';
 import { createScan, fetchSampleCodes } from '../services/api';
+import { PageHeader } from '../components/PageHeader';
 
 interface ScannerPageProps {
   onScanCompleted: (scan: Scan) => void;
@@ -42,14 +44,14 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
   // Load sample codes from API
   const handleLoadSample = async (type: 'vulnerable' | 'clean') => {
     try {
-      const data = await fetchSampleCodes();
+      const data: any = await fetchSampleCodes();
       if (type === 'vulnerable') {
-        setCode(data.vulnerable_code);
-        setFilename(data.vulnerable_filename);
+        setCode(data.vulnerable?.code || data.vulnerable_code || '');
+        setFilename(data.vulnerable?.filename || data.vulnerable_filename || 'vulnerable_service.py');
         setLanguage('python');
       } else {
-        setCode(data.clean_code);
-        setFilename(data.clean_filename);
+        setCode(data.clean?.code || data.clean_code || '');
+        setFilename(data.clean?.filename || data.clean_filename || 'secure_service.py');
         setLanguage('python');
       }
       setErrorMsg(null);
@@ -92,84 +94,57 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
     setErrorMsg(null);
     setResultScan(null);
 
-    // Simulate animated step indicators matching backend stages
     const stages = [
-      'Stage 1: Parser — Extracting AST and filtering assets...',
-      'Stage 2: Pattern Scanner — Running Bandit & Semgrep pre-filters...',
-      'Stage 3: Semantic Reasoner — Contextual intent & business logic analysis...',
-      'Stage 4: CVE Correlator — Querying NVD / CWE threat intelligence matrix...',
-      'Stage 5: Severity Ranker — Evaluating CVSS v3.1 context base scores...',
-      'Stage 6: Report Writer — Plain-English security report synthesis...',
-      'Stage 7: Surgeon — Fail-safe patch generation & AST syntax check...',
-      'Stage 8: Adaptive Memory — Calibrating team preferences & feedback...'
+      'Stage 1: AST Extraction & Asset Filtering...',
+      'Stage 2: Running Semgrep & Bandit Static Rules...',
+      'Stage 3: Contextual Threat Reasoning & CWE Correlation...',
+      'Stage 4: Normalizing Findings & Security Policy Verification...'
     ];
 
-    let currentIdx = 0;
+    let stepIdx = 0;
     const interval = setInterval(() => {
-      if (currentIdx < stages.length) {
-        setCurrentStage(stages[currentIdx]);
-        setStageProgress(Math.round(((currentIdx + 1) / stages.length) * 100));
-        currentIdx++;
+      if (stepIdx < stages.length) {
+        setCurrentStage(stages[stepIdx]);
+        setStageProgress(Math.round(((stepIdx + 1) / stages.length) * 85));
+        stepIdx++;
       }
-    }, 280);
+    }, 400);
 
     try {
-      const scan = await createScan({
-        code,
-        language,
-        filename,
+      const responseScan = await createScan({
+        code: code,
+        filename: filename,
+        language: language,
         scan_mode: scanMode
       });
+
       clearInterval(interval);
-      setCurrentStage('Scan Completed Successfully');
       setStageProgress(100);
-      setResultScan(scan);
-      onScanCompleted(scan);
+      setCurrentStage('Security audit complete.');
+
+      setResultScan(responseScan);
+      onScanCompleted(responseScan);
     } catch (err: any) {
       clearInterval(interval);
-      setErrorMsg(err.message || 'Scan execution failed');
+      setErrorMsg(err.message || 'Security scan failed');
     } finally {
       setIsScanning(false);
     }
   };
 
-  const lineCount = code.split('\n').length;
+  const lineCount = code ? code.split('\n').length : 1;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <Shield className="w-5 h-5 text-cyan-400" />
-            Code Security Scanner & Quarantine Gate
-          </h1>
-          <p className="text-xs text-cyber-muted">
-            Analyze uncommitted code changes before they reach GitHub. Eight autonomous agents evaluate syntax, semantics, and threat intelligence.
-          </p>
-        </div>
-
-        {/* Quick Sample Selectors */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => handleLoadSample('vulnerable')}
-            className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-500/15 text-red-300 border border-red-500/30 hover:bg-red-500/25 transition-all flex items-center gap-1.5"
-          >
-            <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
-            Load Vulnerable Sample
-          </button>
-          <button
-            onClick={() => handleLoadSample('clean')}
-            className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25 transition-all flex items-center gap-1.5"
-          >
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-            Load Clean Sample
-          </button>
-        </div>
-      </div>
+      {/* Page Header */}
+      <PageHeader
+        title="Security Audits"
+        subtitle="Execute on-demand multi-engine security scans against source code files or test fixtures using Semgrep, Bandit, and AI threat modeling."
+        icon={Shield}
+      />
 
       {errorMsg && (
-        <div className="p-3 bg-red-500/15 border border-red-500/40 rounded-lg text-red-300 text-xs flex items-center gap-2">
+        <div className="p-3.5 rounded-lg bg-red-950/30 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           <span>{errorMsg}</span>
         </div>
@@ -177,26 +152,40 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
 
       {/* Editor & Configuration Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Code Input (3 cols) */}
+        {/* Code Input & Textarea Area (3 cols) */}
         <div className="lg:col-span-3 space-y-3">
-          <div className="flex items-center justify-between bg-[#11192c] px-4 py-2 rounded-t-xl border border-cyber-border text-xs text-cyber-muted">
+          {/* Editor Header Bar */}
+          <div className="p-3 rounded-t-xl bg-[#0E1628] border border-[#263449] flex flex-wrap items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-3">
-              <span className="font-mono text-cyan-300 font-semibold">{filename}</span>
-              <span>•</span>
-              <span className="capitalize">{language}</span>
-              <span>•</span>
-              <span>{lineCount} lines</span>
+              <span className="font-mono text-slate-200 font-semibold text-xs flex items-center gap-1.5">
+                <FileCode className="w-4 h-4 text-cyan-400" />
+                {filename}
+              </span>
+              <span className="text-[#8190A8] font-mono text-[11px]">{lineCount} lines</span>
             </div>
 
-            <div className="flex items-center gap-3">
-              <label className="cursor-pointer text-cyan-400 hover:text-cyan-300 flex items-center gap-1">
-                <Upload className="w-3.5 h-3.5" />
-                <span>Upload File</span>
+            <div className="flex items-center gap-2 text-xs text-[#8190A8]">
+              <button
+                onClick={() => handleLoadSample('vulnerable')}
+                className="px-2.5 py-1 rounded bg-[#162237] hover:bg-[#1E2D4A] text-slate-200 hover:text-white border border-[#263449] transition-colors text-[11px]"
+              >
+                Load Vulnerable Sample
+              </button>
+              <button
+                onClick={() => handleLoadSample('clean')}
+                className="px-2.5 py-1 rounded bg-[#162237] hover:bg-[#1E2D4A] text-slate-200 hover:text-white border border-[#263449] transition-colors text-[11px]"
+              >
+                Load Clean Sample
+              </button>
+
+              <label className="cursor-pointer px-2.5 py-1 rounded bg-[#162237] hover:bg-[#1E2D4A] text-slate-200 hover:text-white border border-[#263449] transition-colors flex items-center gap-1 text-[11px]">
+                <Upload className="w-3.5 h-3.5 text-slate-400" />
+                <span>Upload</span>
                 <input
                   type="file"
                   onChange={handleFileUpload}
                   className="hidden"
-                  accept=".py,.js,.ts,.java,.cpp,.c,.go,.php"
+                  accept=".py,.js,.ts,.java,.c,.cpp"
                 />
               </label>
 
@@ -204,21 +193,21 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
                 onClick={() => {
                   navigator.clipboard.writeText(code);
                   setCopied(true);
-                  setTimeout(() => setCopied(false), 1500);
+                  setTimeout(() => setCopied(false), 2000);
                 }}
-                className="hover:text-white flex items-center gap-1"
+                className="px-2 py-1 rounded hover:bg-[#162237] text-slate-300 transition-colors flex items-center gap-1 text-[11px]"
               >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
                 <span>{copied ? 'Copied' : 'Copy'}</span>
               </button>
             </div>
           </div>
 
           {/* Syntax Code Textarea with line numbers */}
-          <div className="relative rounded-b-xl border border-t-0 border-cyber-border bg-[#070b14] overflow-hidden">
+          <div className="rounded-b-xl border border-t-0 border-[#263449] bg-[#0A0F1D] overflow-hidden">
             <div className="flex font-mono text-xs">
               {/* Line Numbers */}
-              <div className="w-12 py-3 bg-[#0a0f1d] border-r border-cyber-border/40 select-none text-right pr-3 text-slate-600 space-y-[2px]">
+              <div className="w-12 py-3 bg-[#0D1422] border-r border-[#263449] select-none text-right pr-3 text-slate-500 space-y-[2px]">
                 {Array.from({ length: Math.max(1, lineCount) }).map((_, i) => (
                   <div key={i} className="leading-5 text-[11px]">{i + 1}</div>
                 ))}
@@ -236,22 +225,22 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
           </div>
         </div>
 
-        {/* Configuration & Trigger Controls (1 col) */}
+        {/* Scan Parameters & Actions (1 col) */}
         <div className="space-y-4">
-          <div className="p-4 rounded-xl bg-cyber-card border border-cyber-border space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+          <div className="p-4 rounded-xl bg-[#111B2E] border border-[#263449] space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#F8FAFC] flex items-center gap-1.5">
               <Layers className="w-4 h-4 text-cyan-400" />
-              Scan Parameters
+              Scan Configuration
             </h3>
 
             <div>
-              <label className="text-[11px] text-cyber-muted block mb-1">Target Language</label>
+              <label className="text-[11px] text-[#8190A8] block mb-1 font-medium">Target Language</label>
               <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
-                className="w-full bg-[#0d1424] border border-cyber-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
+                className="w-full bg-[#0A0F1D] border border-[#263449] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400 font-sans"
               >
-                <option value="python">Python (AST + Bandit)</option>
+                <option value="python">Python (AST + Bandit + Semgrep)</option>
                 <option value="javascript">JavaScript / TypeScript</option>
                 <option value="java">Java (OWASP SAST)</option>
                 <option value="c">C / C++ (Memory Safety)</option>
@@ -259,28 +248,28 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
             </div>
 
             <div>
-              <label className="text-[11px] text-cyber-muted block mb-1">Audit Policy Mode</label>
+              <label className="text-[11px] text-[#8190A8] block mb-1 font-medium">Policy Enforcement Mode</label>
               <select
                 value={scanMode}
                 onChange={(e) => setScanMode(e.target.value)}
-                className="w-full bg-[#0d1424] border border-cyber-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400"
+                className="w-full bg-[#0A0F1D] border border-[#263449] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400 font-sans"
               >
-                <option value="local_demo">Local Demo Mode (Full Insights)</option>
+                <option value="local_demo">Audit Mode (Continuous Assessment)</option>
                 <option value="strict">Strict Mode (Pre-Push Gate Block)</option>
-                <option value="review">Review Mode (CI/CD Advisory)</option>
+                <option value="review">Review Mode (CI/CD PR Gating)</option>
               </select>
             </div>
 
-            <div className="pt-2 border-t border-cyber-border/60">
+            <div className="pt-2 border-t border-[#263449]">
               <button
                 onClick={handleStartScan}
                 disabled={isScanning || !code.trim()}
-                className="w-full py-3 rounded-lg bg-gradient-to-r from-cyan-500 to-emerald-400 text-black font-extrabold text-xs tracking-wider uppercase flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-cyan-500/20 disabled:opacity-50"
+                className="w-full py-2.5 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-slate-950 font-semibold text-xs tracking-wider uppercase flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
               >
                 {isScanning ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Executing Pipeline...</span>
+                    <span>Analyzing Codebase...</span>
                   </>
                 ) : (
                   <>
@@ -292,23 +281,23 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
             </div>
           </div>
 
-          {/* Pipeline Stage Live Tracker */}
+          {/* Pipeline Stage Tracker */}
           {isScanning && (
-            <div className="p-4 rounded-xl bg-cyan-950/20 border border-cyan-500/40 space-y-3 animate-pulse">
+            <div className="p-4 rounded-xl bg-[#0E1628] border border-[#263449] space-y-3">
               <div className="flex items-center justify-between text-xs font-semibold text-cyan-300">
                 <span className="flex items-center gap-2">
                   <Cpu className="w-4 h-4 text-cyan-400 animate-spin" />
-                  Orchestrator Active
+                  Audit Pipeline Active
                 </span>
-                <span className="font-mono">{stageProgress}%</span>
+                <span className="font-mono text-slate-300">{stageProgress}%</span>
               </div>
-              <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+              <div className="w-full bg-[#162237] rounded-full h-1.5 overflow-hidden">
                 <div
                   className="bg-cyan-400 h-full transition-all duration-300"
                   style={{ width: `${stageProgress}%` }}
-                ></div>
+                />
               </div>
-              <div className="text-[11px] text-slate-300 font-mono">
+              <div className="text-[11px] text-slate-400 font-mono">
                 {currentStage}
               </div>
             </div>
@@ -318,89 +307,69 @@ export const ScannerPage: React.FC<ScannerPageProps> = ({
 
       {/* Results Section */}
       {resultScan && (
-        <div className="p-6 rounded-xl bg-cyber-card border border-cyber-border space-y-6 animate-fadeIn">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-cyber-border">
+        <div className="p-5 rounded-xl bg-[#111B2E] border border-[#263449] space-y-4">
+          <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <StatusBadge status={resultScan.status} />
-                <span className="text-xs font-mono text-cyan-400">Scan ID: {resultScan.id.substring(0, 8)}</span>
-                <span className="text-xs text-cyber-muted">• {(resultScan.duration_ms / 1000).toFixed(2)}s</span>
-              </div>
-              <h2 className="text-lg font-bold text-white">
-                Audit Results for {resultScan.filename}
-              </h2>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-cyber-muted">Findings Breakdown:</span>
-              <span className="px-2.5 py-1 rounded bg-red-500/15 text-red-400 font-bold font-mono text-xs border border-red-500/30">
-                {resultScan.critical_count} Critical
-              </span>
-              <span className="px-2.5 py-1 rounded bg-orange-500/15 text-orange-400 font-bold font-mono text-xs border border-orange-500/30">
-                {resultScan.high_count} High
-              </span>
-              <span className="px-2.5 py-1 rounded bg-amber-500/15 text-amber-400 font-bold font-mono text-xs border border-amber-500/30">
-                {resultScan.medium_count} Medium
-              </span>
+              <h3 className="text-sm font-bold text-[#F8FAFC]">
+                Audit Results: {resultScan.total_findings} Findings Identified
+              </h3>
+              <p className="text-xs text-[#A7B3C7]">
+                Duration: <span className="font-mono text-white">{resultScan.duration_seconds}s</span> • Commit: <span className="font-mono text-cyan-400">{resultScan.commit_sha}</span>
+              </p>
             </div>
           </div>
 
-          {/* Finding Cards */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Identified Vulnerabilities ({resultScan.findings.length})
-            </h3>
-
-            {resultScan.findings.length === 0 ? (
-              <div className="p-8 rounded-lg bg-[#0e1628] text-center space-y-2">
-                <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
-                <div className="text-sm font-bold text-white">No Vulnerabilities Detected</div>
-                <div className="text-xs text-cyber-muted">Code complies with secure development policies.</div>
-              </div>
-            ) : (
-              resultScan.findings.map((finding) => (
-                <div
-                  key={finding.id}
-                  className="p-4 rounded-lg bg-[#0e1627] border border-cyber-border hover:border-cyan-500/40 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
-                >
-                  <div className="space-y-1.5 flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <SeverityBadge severity={finding.severity} score={finding.numeric_score} />
-                      <span className="text-xs font-mono text-cyan-400 font-bold">{finding.rule_id}</span>
-                      {finding.cve_id && (
-                        <span className="text-[10px] font-mono text-amber-400 bg-amber-950/40 px-2 py-0.5 rounded border border-amber-800/40">
-                          {finding.cve_id}
-                        </span>
-                      )}
-                      <span className="text-xs text-cyber-muted">Line {finding.line_start}</span>
-                    </div>
-
-                    <h4 className="text-sm font-bold text-white">{finding.title}</h4>
-                    <p className="text-xs text-slate-300 line-clamp-2">{finding.description}</p>
-                    <div className="text-[11px] text-cyber-muted font-mono">
-                      Source: <span className="text-cyan-300">{finding.detection_source}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => onOpenFinding(finding)}
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-cyber-border transition-colors"
-                    >
-                      Inspect Evidence
-                    </button>
-                    {finding.remediation && (
-                      <button
-                        onClick={() => onNavigateToRemediation(finding)}
-                        className="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black transition-colors"
-                      >
-                        Remediate Patch →
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
+          <div className="overflow-x-auto rounded-lg border border-[#263449]">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#0E1628] text-[#8190A8] border-b border-[#263449] font-mono uppercase text-[11px]">
+                <tr>
+                  <th className="py-2.5 px-3.5">Severity</th>
+                  <th className="py-2.5 px-3.5">Title</th>
+                  <th className="py-2.5 px-3.5">File Location</th>
+                  <th className="py-2.5 px-3.5">Classification</th>
+                  <th className="py-2.5 px-3.5">Scanner Source</th>
+                  <th className="py-2.5 px-3.5 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#263449]/60 text-slate-200 bg-[#111B2E]">
+                {resultScan.findings && resultScan.findings.map((f) => (
+                  <tr key={f.id} className="hover:bg-[#162237] transition-colors">
+                    <td className="py-3 px-3.5">
+                      <SeverityBadge severity={f.severity} />
+                    </td>
+                    <td className="py-3 px-3.5 font-semibold text-[#F8FAFC]">
+                      {f.title}
+                    </td>
+                    <td className="py-3 px-3.5 font-mono text-[#A7B3C7] text-[11px]">
+                      {f.file_path}:{f.line_start}
+                    </td>
+                    <td className="py-3 px-3.5 font-mono text-slate-300">
+                      {f.cwe_id || 'CWE'}
+                    </td>
+                    <td className="py-3 px-3.5 text-slate-400 capitalize">
+                      {f.scanner}
+                    </td>
+                    <td className="py-3 px-3.5 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => onOpenFinding(f)}
+                          className="px-2.5 py-1 rounded bg-[#162237] hover:bg-[#1E2D4A] text-slate-200 text-[11px] font-medium border border-[#263449] transition-colors"
+                        >
+                          Details
+                        </button>
+                        <button
+                          onClick={() => onNavigateToRemediation(f)}
+                          className="px-2.5 py-1 rounded bg-cyan-950/60 hover:bg-cyan-900/70 text-cyan-300 text-[11px] font-medium border border-cyan-800/40 transition-colors flex items-center gap-1"
+                        >
+                          <span>Remediate</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

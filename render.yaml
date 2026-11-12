@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: shadow-code-platform
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "pip install -r backend/requirements.txt && cd frontend && npm install && npm run build && cd .."
+    startCommand: "uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: NODE_VERSION
+        value: 20.11.0
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DATABASE
+        value: shadow_code
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-flash-lite-latest
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_REPOSITORY
+        value: Sachinshekhar82/Shadow-code
+      - key: CORS_ORIGINS
+        value: "*"

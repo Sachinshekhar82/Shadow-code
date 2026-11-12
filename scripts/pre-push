@@ -1,21 +1,74 @@
 #!/bin/sh
-# SHADOW CODE — PRE-PUSH INTERCEPTION GATE
-# Autonomous 8-Agent Security Check for Local Commits
-# Install by running:
-#   cp scripts/pre-push .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+# ==============================================================================
+# SHADOW-CODE — PRE-PUSH INTERCEPTION GATE
+# Autonomous DevSecOps Security Gate for Local Commits & Push Events
+# ==============================================================================
 
-echo "🛡️  [Shadow Code] Intercepting Git push event..."
-echo "🔍  [Shadow Code] Executing 8-Agent Security Pipeline against staged code..."
+echo ""
+echo "==================================================================="
+echo "🛡️  [Shadow-Code] Intercepting Git push event..."
+echo "🔍  [Shadow-Code] Auditing code through autonomous security gate..."
+echo "==================================================================="
 
-# Query Shadow Code Gateway
-RESPONSE=$(curl -s -X POST http://127.0.0.1:8000/api/scans/demo-run)
+# 1. Verify Shadow-Code backend connectivity
+HEALTH=$(curl -s --connect-timeout 2 http://127.0.0.1:8000/api/health)
 
-if echo "$RESPONSE" | grep -q '"critical_count": 0'; then
-    echo "✅  [Shadow Code] Gate Passed: No critical security vulnerabilities detected."
-    exit 0
+if [ -n "$HEALTH" ]; then
+    # 2. Trigger scan on the platform
+    RESPONSE=$(curl -s -X POST http://127.0.0.1:8000/api/scans \
+        -H "Content-Type: application/json" \
+        -d '{"repository_id": "repo-shadow-code", "branch": "main", "trigger": "pre-push"}')
+
+    CRIT_ZERO=$(echo "$RESPONSE" | grep -q '"critical_count": 0' && echo "yes" || echo "no")
+    HIGH_ZERO=$(echo "$RESPONSE" | grep -q '"high_count": 0' && echo "yes" || echo "no")
+
+    if [ "$CRIT_ZERO" = "yes" ] && [ "$HIGH_ZERO" = "yes" ]; then
+        echo "✅  [Shadow-Code] Gate Passed: No critical or high vulnerabilities detected."
+        echo "🚀  Proceeding with git push..."
+        exit 0
+    else
+        echo ""
+        echo "❌  ==================================================================="
+        echo "🚨  [Shadow-Code] GIT PUSH BLOCKED BY SECURITY POLICY GATE!"
+        echo "❌  ==================================================================="
+        echo "⚠️   Critical and High security vulnerabilities were detected in your code."
+        echo "🛑  Direct push to remote has been prevented to protect the repository."
+        echo ""
+        echo "🌐  REDIRECTING TO SHADOW-CODE WEB CONSOLE FOR AI REMEDIATION:"
+        echo "    👉 http://localhost:5173"
+        echo ""
+        echo "📌  Next steps:"
+        echo "    1. Review the detected vulnerabilities in the Web Console."
+        echo "    2. Inspect the AI-generated surgical fix & regression tests."
+        echo "    3. Click 'Create Pull Request' on the website to stage a verified PR on GitHub."
+        echo "==================================================================="
+        echo ""
+
+        # Launch default browser on Windows / macOS / Linux
+        if command -v cmd.exe >/dev/null 2>&1; then
+            cmd.exe /c start "" "http://localhost:5173" </dev/null >/dev/null 2>&1
+        elif command -v xdg-open >/dev/null 2>&1; then
+            xdg-open "http://localhost:5173" </dev/null >/dev/null 2>&1 &
+        elif command -v open >/dev/null 2>&1; then
+            open "http://localhost:5173" </dev/null >/dev/null 2>&1 &
+        fi
+
+        # Block the git push
+        exit 1
+    fi
 else
-    echo "❌  [Shadow Code] GIT PUSH BLOCKED BY SECURITY POLICY GATE!"
-    echo "🚨  Critical vulnerabilities found in submission. Merge aborted."
-    echo "🌐  Inspect findings and apply fail-safe patches at: http://127.0.0.1:5173"
-    exit 1
+    echo "⚠️  [Shadow-Code] Backend not detected on http://127.0.0.1:8000."
+    echo "ℹ️  Running local AST scanner gate..."
+    bandit -r . -ll -q
+    if [ $? -eq 0 ]; then
+        echo "✅  [Shadow-Code] Local AST check clean."
+        exit 0
+    else
+        echo "❌  [Shadow-Code] High severity security issues flagged by Bandit."
+        echo "🌐  Inspect findings at: http://localhost:5173"
+        if command -v cmd.exe >/dev/null 2>&1; then
+            cmd.exe /c start http://localhost:5173
+        fi
+        exit 1
+    fi
 fi

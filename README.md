@@ -1,271 +1,307 @@
-# SHADOW CODE: Agentic AI Framework for Autonomous Secure SDLC Auditing
+# 🛡️ Shadow-Code: Agentic AI-Powered Secure SDLC Auditor
 
-[![Tests](https://img.shields.io/badge/tests-15%2F15%20passed-brightgreen.svg)]()
-[![FastAPI](https://img.shields.io/badge/Backend-FastAPI%20%2B%20Python%203.11-009688.svg)]()
-[![Vite-React](https://img.shields.io/badge/Frontend-Vite%20%2B%20React%20%2B%20TypeScript-61DAFB.svg)]()
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)]()
+[![CI/CD Security Pipeline](https://github.com/Sachinshekhar82/Shadow-code/actions/workflows/security-sdlc.yml/badge.svg)](https://github.com/Sachinshekhar82/Shadow-code/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-brightgreen.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
+[![React 19](https://img.shields.io/badge/Frontend-React%2019-61DAFB.svg)](https://react.dev/)
+[![Scanners](https://img.shields.io/badge/Scanners-Semgrep%20%7C%20Bandit-orange.svg)](https://semgrep.dev/)
 
-> **Institution:** Dayananda Sagar Academy of Technology & Management (Autonomous Institute under VTU, Belagavi)  
-> **Department:** Department of Computer Science & Engineering — Cyber Security  
-> **Milestone:** 7th Semester B.E. — Project Phase 2 First Review  
-> **Project Guide:** Mr. Anitha R, Associate Professor  
-> **Repository:** [https://github.com/Sachinshekhar82/Shadow-code.git](https://github.com/Sachinshekhar82/Shadow-code.git)  
-
-### Project Team
-- **Sachin Shekhar** — 1DT23CY040
-- **Abhinav Raj** — 1DT23CY002
-- **Ikshit Sinha** — 1DT23CY022
-- **Abhishek Anand** — 1DT23CY003
+> **Shadow-Code** is an enterprise-grade DevSecOps platform and pre-push / PR interception gate that combines deterministic static security analysis (Semgrep & Bandit) with contextual LLM reasoning, isolated sandbox patch validation, and GitHub Pull Request gating.
 
 ---
 
-## 1. Problem Statement & Motivation
+## 1. System Architecture
 
-Modern CI/CD pipelines prioritize rapid development and deployment, which increases the likelihood of introducing vulnerabilities into upstream repositories. Traditional Static Application Security Testing (SAST) tools rely predominantly on predefined, rigid syntax patterns. Consequently, they:
-1. **Miss Semantic & Logic Flaws:** Blind to complex context-dependent vulnerabilities and business-logic flaws (e.g., Broken Object Level Authorization / BOLA).
-2. **Induce Alert Fatigue:** Generate excessive false positives, eroding developer trust and leading to ignored alerts.
-3. **Lack Automated Remediation:** Typically stop at vulnerability detection without providing validated, fail-safe remediation or contextual learning.
-
-### The Shadow Code Solution
-**Shadow Code** introduces an intelligent security layer between the developer's workstation and the remote repository. It intercepts uncommitted code changes in a temporary quarantine state and orchestrates an autonomous eight-agent pipeline combining deterministic static pre-filtering, contextual semantic reasoning, vulnerability threat intelligence, CVSS v3.1 ranking, fail-safe AST patch synthesis, and human-in-the-loop adaptive memory.
+```mermaid
+flowchart TD
+    Dev["Developer Workstation"] -->|"git push / PR"| Gate["Pre-Push Hook / Webhook"]
+    Gate -->|"POST /api/scans"| Gateway["Shadow-Code Gateway (FastAPI)"]
+    
+    subgraph MultiEngine["1. Multi-Engine Static Analysis"]
+        Semgrep["Semgrep Rules Engine (YAML)"]
+        Bandit["Bandit Python AST Analyzer"]
+    end
+    
+    Gateway --> Semgrep
+    Gateway --> Bandit
+    Semgrep & Bandit --> Normalizer["Normalized Finding Schema"]
+    
+    subgraph AgenticOrchestration["2. Coordinated AI Agent Workflow"]
+        Reasoner["Vulnerability Reasoning Agent"]
+        Surgeon["Remediation Agent (Minimal Diffs)"]
+        Validator["Validation Agent (Isolated Sandbox)"]
+        Reporter["PR & Reporting Agent"]
+    end
+    
+    Normalizer --> Reasoner
+    Reasoner -->|"Threat Scenario & CWE/OWASP"| Surgeon
+    Surgeon -->|"Patch + Regression Test"| Validator
+    Validator -->|"AST check & Scanner Re-scan"| Reporter
+    
+    Reporter -->|"Explicit Human Sign-Off"| GitHubPR["GitHub Pull Request"]
+    
+    subgraph Persistence["3. Data Persistence"]
+        MongoDB[("MongoDB Atlas / In-Memory Mock")]
+    end
+    
+    Gateway <--> MongoDB
+```
 
 ---
 
-## 2. The Eight-Agent Architecture
+## 2. Core Modules & Agent Responsibilities
 
-The architecture follows a sequential and reactive LangGraph-style workflow:
+### Multi-Engine Static Analysis
+- **Semgrep Rules Engine**: Multi-language pattern matching for Command Injection (CWE-78), SQL Injection (CWE-89), Insecure Deserialization (CWE-502), and Weak Cryptography (CWE-328).
+- **Bandit AST Analyzer**: Deep Python abstract syntax tree analyzer flagging insecure imports, subprocess misuse, and hardcoded secrets.
+- **Normalization Layer**: Combines findings from both engines into a unified schema, removes duplicates, attaches source code context (±3 lines), and normalizes severity ratings.
 
-```
-[Developer / Git Push]
-         │
-         ▼
-[Shadow Code Gateway] ──(Quarantine State)
-         │
-         ▼
-┌────────────────────────────────────────────────────────┐
-│ 1. Agent 1: Parser / Receptionist                      │
-│    Abstract Syntax Tree (AST) & File Type Filtering   │
-└──────────────────────────┬─────────────────────────────┘
-                           │
-┌──────────────────────────▼─────────────────────────────┐
-│ 2. Agent 2: Pattern Scanner / Filter                   │
-│    Deterministic SAST (Bandit/Semgrep) & Pre-Filter    │
-│    * Eliminates 80-90% safe code before LLM calls     │
-└──────────────────────────┬─────────────────────────────┘
-                           │
-┌──────────────────────────▼─────────────────────────────┐
-│ 3. Agent 3: Semantic Reasoner / Doctor                 │
-│    Context & Intent Reasoning (BOLA, Logic Flaws)     │
-└──────────────────────────┬─────────────────────────────┘
-                           │
-┌──────────────────────────▼─────────────────────────────┐
-│ 4. Agent 4: CVE Correlator / Historian                 │
-│    Threat Intelligence Mapping (NVD / CWE Matrix)      │
-└──────────────────────────┬─────────────────────────────┘
-                           │
-┌──────────────────────────▼─────────────────────────────┐
-│ 5. Agent 5: Severity Ranker / Judge                    │
-│    Context-Aware CVSS v3.1 Scoring & Rationale         │
-└──────────────────────────┬─────────────────────────────┘
-                           │
-┌──────────────────────────▼─────────────────────────────┐
-│ 6. Agent 6: Report Writer / Communicator               │
-│    Plain-English Synthesis & SDLC Gate Decision        │
-└──────────────────────────┬─────────────────────────────┘
-                           │
-┌──────────────────────────▼─────────────────────────────┐
-│ 7. Agent 7: The Surgeon / Fixer                        │
-│    Fail-Safe Patch Synthesis & AST Syntax Validation  │
-└──────────────────────────┬─────────────────────────────┘
-                           │
-                           ▼
-          [Developer SOC Dashboard Review]
-                           │
-                           ▼
-┌────────────────────────────────────────────────────────┐
-│ 8. Agent 8: Adaptive Memory / Learner                  │
-│    Human-in-the-Loop Feedback & Weight Calibration     │
-│    * Safety Guardrail: Critical Risks Never Suppressed│
-└──────────────────────────┬─────────────────────────────┘
-                           │
-                           ▼
-         [Approved Remote Merge to GitHub]
-```
-
-### Agent Detailed Breakdown
-1. **Agent 1 — Parser / Receptionist:** Ingests source code, generates Abstract Syntax Trees (AST), divides files into logical function/class units, and filters non-code assets (e.g. images, binaries, lock files).
-2. **Agent 2 — Pattern Scanner / Filter:** Executes deterministic static scanners (Bandit, AST regex rules). Pre-filters safe units to save ~80% LLM tokens before deep reasoning.
-3. **Agent 3 — Semantic Reasoner / Doctor:** Evaluates code context and business logic (e.g., detecting Broken Object Level Authorization where state mutations lack caller role verification). Uses live LLM providers when configured, or a verified deterministic contextual engine.
-4. **Agent 4 — CVE Correlator / Historian:** Matches findings against curated NVD/CWE threat intelligence benchmarks with confidence scoring.
-5. **Agent 5 — Severity Ranker / Judge:** Assigns CVSS v3.1 base score estimates (0.0 to 10.0) based on attack vectors, privileges, and context. Explains the exact formula and rationale for each rating.
-6. **Agent 6 — Report Writer / Communicator:** Generates plain-English executive reports, separates static scanner evidence from AI semantic deductions, and recommends SDLC gate decisions (PASS, REVIEW_REQUIRED, BLOCK_RECOMMENDED).
-7. **Agent 7 — The Surgeon / Fixer:** Synthesizes context-aware secure replacements with unified Git diffs. Takes a pre-fix snapshot and runs automated AST syntax checks before allowing application.
-8. **Agent 8 — Adaptive Memory / Learner:** Records developer decisions (accept, override, false-positive) to adapt repository-specific severity weights while enforcing hard safety guardrails on critical vulnerabilities.
+### Coordinated Agent Workflows
+1. **Repository Analysis Agent**: Maps directory structure, entry points, route handlers, and sensitive data flows.
+2. **Vulnerability Reasoning Agent**: Analyzes code context to verify exploitability, constructs realistic threat models and attack scenarios, maps to CWE / OWASP Top 10, and filters false positives.
+3. **Remediation Agent**: Synthesizes surgical, minimal unified diffs and generates automated regression tests.
+4. **Validation Agent**: Operates in an isolated temporary sandbox, checks Python syntax with `ast.parse`, re-runs Semgrep and Bandit on patched code to confirm vulnerability resolution, and validates regression test assertions.
+5. **PR & Reporting Agent**: Formats audit reports and publishes Pull Requests with dedicated remediation branches to GitHub upon explicit human approval.
 
 ---
 
 ## 3. Technology Stack
 
-- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, Lucide React icons
-- **Backend:** Python 3.11, FastAPI, Pydantic v2, SQLAlchemy, Uvicorn, SQLite
-- **Security Scanners:** Bandit 1.9.4, Python `ast` syntax tree parser, regex OWASP engine
-- **Testing:** Pytest 9.1, HTTPX, FastAPI TestClient
+- **Backend**: Python 3.11+, FastAPI, Uvicorn, Pydantic v2, PyMongo, mongomock, PyGithub, Bandit, Semgrep, Pytest.
+- **Frontend**: React 19, Vite, TypeScript, Tailwind CSS, Lucide React, Recharts.
+- **Database**: MongoDB Atlas / Local MongoDB, with automatic graceful fallback to mongomock when offline.
+- **CI/CD**: GitHub Actions workflow (`.github/workflows/security-sdlc.yml`).
 
 ---
 
-## 4. Project Folder Structure
-
-```
-Shadow-code/
-├── backend/
-│   ├── agents/
-│   │   ├── base.py                 # Abstract Base Agent
-│   │   ├── parser.py               # Agent 1: Receptionist / Parser
-│   │   ├── pattern_scanner.py      # Agent 2: Filter / Pattern Scanner
-│   │   ├── semantic_reasoner.py    # Agent 3: Doctor / Semantic Reasoner
-│   │   ├── cve_correlator.py       # Agent 4: Historian / CVE Correlator
-│   │   ├── severity_ranker.py      # Agent 5: Judge / Severity Ranker
-│   │   ├── report_writer.py        # Agent 6: Communicator / Report Writer
-│   │   ├── surgeon.py              # Agent 7: Fixer / The Surgeon
-│   │   └── adaptive_memory.py      # Agent 8: Learner / Adaptive Memory
-│   ├── api/
-│   │   ├── routes_scans.py         # /api/scans
-│   │   ├── routes_findings.py      # /api/findings
-│   │   ├── routes_remediation.py   # /api/remediations
-│   │   ├── routes_memory.py        # /api/adaptive-memory
-│   │   ├── routes_repos.py         # /api/repositories
-│   │   └── routes_system.py        # /api/status, /api/health, /api/samples
-│   ├── database/
-│   │   ├── session.py              # SQLAlchemy database connection
-│   │   └── models.py               # Persistent SQLite tables
-│   ├── pipeline/
-│   │   └── orchestrator.py         # Sequential & reactive pipeline engine
-│   ├── samples/
-│   │   ├── vulnerable_app.py       # Demonstrates SQLi, Hardcoded Key, Command Injection, BOLA, MD5
-│   │   ├── clean_app.py            # Secure reference counterpart
-│   │   └── sample_meta.py          # Rationale and CWE/CVE metadata
-│   ├── schemas/                    # Pydantic v2 request/response schemas
-│   ├── tests/                      # Automated unit and integration tests
-│   ├── venv/                       # Dedicated Python virtual environment
-│   └── main.py                     # FastAPI application entrypoint & static mount
-├── frontend/
-│   ├── src/
-│   │   ├── components/             # Navbar, Sidebar, Badges, DiffViewer, FindingModal
-│   │   ├── pages/                  # 10 Review-ready pages
-│   │   ├── services/api.ts         # Backend API client
-│   │   └── types/index.ts          # TypeScript domain interfaces
-│   ├── public/diagrams/            # Architecture diagrams from review presentations
-│   └── dist/                       # Compiled production web bundle
-├── docs/reference/                 # Reference PPTX & PDF review documents
-├── scripts/
-│   ├── start_backend.bat           # One-click backend startup script
-│   ├── start_backend.ps1           # PowerShell backend startup script
-│   ├── start_frontend.bat          # One-click frontend startup script
-│   ├── start_frontend.ps1          # PowerShell frontend startup script
-│   └── pre-push                    # Git local pre-push hook
-├── .env.example
-├── .gitignore
-└── README.md
-```
-
----
-
-## 5. Prerequisites & Quick Start
+## 4. Getting Started
 
 ### Prerequisites
-- **Python 3.11+** installed on your system.
-- **Node.js (v18+) & npm** (Node.js LTS v24.20.0 installed).
-- **Git** version 2.40+.
+- Python 3.11+
+- Node.js 18+ & npm
+- Git
 
-### Option A: Running Both Backend & Frontend Together (Single Process)
-Because the compiled production frontend is mounted directly inside the FastAPI backend, you can start the entire application with a single command:
+### Quick Setup
 
-```powershell
-# Open terminal in project root
-$env:PYTHONPATH = (Get-Location).Path
-& ".\backend\venv\Scripts\python.exe" -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
-```
-Then open your web browser at: **[http://127.0.0.1:8000](http://127.0.0.1:8000)**.
+1. **Clone the Repository**:
+   ```bash
+   git clone https://github.com/Sachinshekhar82/Shadow-code.git
+   cd Shadow-code
+   ```
 
-### Option B: Running Full Stack with Hot-Reload Development (Two Terminals)
+2. **Backend Setup**:
+   ```bash
+   # Create and activate virtual environment
+   python -m venv .venv
+   # Windows:
+   .\.venv\Scripts\Activate.ps1
+   # Linux/macOS:
+   source .venv/bin/activate
 
-**Terminal 1 — Backend API Server:**
-```powershell
-# Double click scripts\start_backend.bat or run:
-powershell -ExecutionPolicy Bypass -File .\scripts\start_backend.ps1
-```
-Backend API will start on: **`http://127.0.0.1:8000`** (Swagger docs: **`http://127.0.0.1:8000/docs`**).
+   # Install dependencies
+   pip install -r backend/requirements.txt
+   ```
 
-**Terminal 2 — Frontend Dev Server:**
-```powershell
-# Double click scripts\start_frontend.bat or run:
-powershell -ExecutionPolicy Bypass -File .\scripts\start_frontend.ps1
-```
-Frontend dashboard will open on: **`http://127.0.0.1:5173`**.
+3. **Frontend Setup**:
+   ```bash
+   cd frontend
+   npm install
+   cd ..
+   ```
 
----
-
-## 6. Demonstration Workflow for College Review
-
-1. **Dashboard:** Open the application. Notice the live metrics, severity breakdown, and pipeline status.
-2. **One-Click Demo Scan:** Click the cyan **"Run Demo Scan"** button in the header. The system submits `vulnerable_app.py` through the eight-agent pipeline, persisting results to SQLite.
-3. **Inspect Findings:** Navigate to **Findings Explorer**. Filter by Critical / High. Click **"Inspect Evidence"** on the SQL Injection or Broken Object Level Authorization finding to view line numbers, estimated CVSS 3.1 vector, and NVD reference links.
-4. **Remediation Workspace:** Navigate to **Remediation Workspace**. View the side-by-side unified Git diff produced by Agent 7 (The Surgeon). Verify the **AST Syntax Validation Passed** badge. Click **"Approve Patch"** and **"Apply Patch"** to mark the finding resolved.
-5. **Adaptive Memory Feedback:** In the findings modal, override a finding with a reason (e.g. *"Internal test environment"*). Navigate to **Adaptive Feedback** to observe the real-time weight adjustment recorded by Agent 8.
-6. **Download Audit Report:** Navigate to **Audit Reports**. Export the formal scan report as JSON or CSV, or click **"Print Report"**.
+4. **Environment Configuration**:
+   ```bash
+   cp .env.example .env
+   ```
+   Edit `.env` to configure your `MONGODB_URI` and optional `GITHUB_TOKEN` for remote repository Pull Requests.
 
 ---
 
-## 7. Automated Test Execution Results
+## 5. Running the Application
 
-All 15 automated test cases pass with 100% success:
-
+### Option A: Using Helper Scripts (Windows)
 ```powershell
-$env:PYTHONPATH = (Get-Location).Path
-& ".\backend\venv\Scripts\pytest.exe" backend\tests -v
+# In Terminal 1 (Backend):
+.\scripts\start_backend.ps1
+
+# In Terminal 2 (Frontend):
+.\scripts\start_frontend.ps1
 ```
 
-```
-backend/tests/test_all_agents.py::test_agent_1_parser PASSED             [  6%]
-backend/tests/test_all_agents.py::test_agent_2_pattern_scanner PASSED    [ 13%]
-backend/tests/test_all_agents.py::test_agent_3_semantic_reasoner PASSED  [ 20%]
-backend/tests/test_all_agents.py::test_agent_4_cve_correlator PASSED     [ 26%]
-backend/tests/test_all_agents.py::test_agent_5_severity_ranker PASSED    [ 33%]
-backend/tests/test_all_agents.py::test_agent_6_report_writer PASSED      [ 40%]
-backend/tests/test_all_agents.py::test_agent_7_surgeon PASSED            [ 46%]
-backend/tests/test_all_agents.py::test_agent_8_adaptive_memory PASSED    [ 53%]
-backend/tests/test_all_agents.py::test_full_pipeline_orchestration PASSED [ 60%]
-backend/tests/test_api.py::test_api_root PASSED                          [ 66%]
-backend/tests/test_api.py::test_api_health PASSED                        [ 73%]
-backend/tests/test_api.py::test_api_status PASSED                        [ 80%]
-backend/tests/test_api.py::test_api_samples PASSED                       [ 86%]
-backend/tests/test_api.py::test_api_demo_scan PASSED                     [ 93%]
-backend/tests/test_api.py::test_api_feedback_and_memory PASSED           [100%]
+### Option B: Manual Execution
+```bash
+# Terminal 1: Backend
+uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
 
-======================= 15 passed in 1.75s =======================
+# Terminal 2: Frontend
+cd frontend
+npm run dev
+```
+
+- **Frontend Dashboard**: [http://127.0.0.1:5173](http://127.0.0.1:5173)
+- **FastAPI Interactive Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **API Health Check**: [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health)
+
+---
+
+## 6. Installing the Git Pre-Push Gate
+
+To prevent insecure code from reaching the remote repository `https://github.com/Sachinshekhar82/Shadow-code.git`:
+
+```bash
+# Install the hook
+cp scripts/pre-push .git/hooks/pre-push
+chmod +x .git/hooks/pre-push
+```
+
+Every time you execute `git push`, the hook scans staged code via the Shadow-Code engine and aborts the push if unmitigated Critical or High severity vulnerabilities are detected.
+
+---
+
+## 7. Running Tests & Research Evaluation
+
+### Automated Pytest Suite
+```bash
+# Run the complete test suite (API, Database, Reports, Scanners & Agents)
+pytest -v
 ```
 
 ---
 
-## 8. Dual Git Enforcement Options
+## 8. MongoDB Atlas Database & Persistent Collections
 
-- **Strict Mode (Local Pre-Push Hook):**  
-  Install the hook to intercept git push commands on developer laptops:
-  ```bash
-  cp scripts/pre-push .git/hooks/pre-push
-  chmod +x .git/hooks/pre-push
-  ```
-- **Review Mode (GitHub Actions CI/CD):**  
-  Deploy `.github/workflows/shadow-code.yml` for pull-request advisory gate evaluations.
+Shadow-Code uses MongoDB Atlas for enterprise-grade persistent audit logging and vulnerability lifecycle management.
+
+### Environment Variables
+Configure your MongoDB Atlas cluster in `backend/.env`:
+
+```env
+MONGODB_URI=mongodb+srv://<db_username>:<db_password>@cluster0.asesgi4.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
+MONGODB_DATABASE=shadow_code
+```
+
+### Persistent Collections & Automated Indexes
+The centralized `MongoDBManager` verifies connectivity via an admin ping command upon startup and ensures the following query indexes:
+
+1. **`repositories`**:
+   - `id` (Unique index)
+   - `url` (Ascending)
+   - `created_at` (Descending)
+2. **`scans`**:
+   - `id` (Unique index)
+   - `repository_id` + `commit_sha` (Compound index)
+   - `created_at` (Descending)
+   - `status` (Ascending)
+3. **`findings`**:
+   - `id` (Unique index)
+   - `scan_id`, `repository_id`, `severity`, `remediation_status`
+   - `created_at` (Descending)
+4. **`remediations`**:
+   - `id` (Unique index)
+   - `finding_id`, `scan_id`, `approval_status`, `validation_status`
+   - `created_at` (Descending)
+5. **`agent_runs`**:
+   - `id` (Unique index)
+   - `scan_id`, `finding_id`, `started_at`
+6. **`pull_requests`**:
+   - `id` (Unique index)
+   - `repository_id`, `scan_id`, `remediation_id`, `status`
 
 ---
 
-## 9. Academic Attribution & Literature Foundations
+## 9. Report Generation & Download Engine
 
-Developed as part of the Cyber Security Capstone Curriculum at **Dayananda Sagar Academy of Technology & Management (DSATM)** under the guidance of **Mr. Anitha R (Associate Professor)**.
+Shadow-Code generates compliance and security reports in three formats:
 
-**Research Papers Cited in Project Specification:**
-1. *Z. Sheng, et al. (2025)* — "LLMs in Software Security: A Survey of Vulnerability Detection Techniques and Insights" (arXiv).
-2. *NDSS Symposium (2025)* — "From Large to Mammoth: A Comparative Evaluation of LLMs in Vulnerability Detection".
-3. *IEEE DSN (2025)* — "Detecting Code Vulnerabilities using LLMs".
-4. *X. Yin, et al. (2024)* — "LLM-Based Multi-Agent Systems for Software Engineering: Literature Review and Vision" (arXiv).
+| Format | MIME Type | Filename | Key Capabilities |
+| :--- | :--- | :--- | :--- |
+| **PDF** | `application/pdf` | `shadow-code-audit-<id>.pdf` | Enterprise executive summary, CVSS severity distribution, code evidence blocks, AI remediation details, page numbers ("Page X of Y"), and audit scope limitations. Generated via ReportLab. |
+| **CSV** | `text/csv; charset=utf-8` | `shadow-code-audit-<id>.csv` | RFC 4180 compliant tabular export with spreadsheet formula injection defense (prepends `'` to cells starting with `=`, `+`, `-`, `@`, `\t`, `\r`). |
+| **JSON** | `application/json` | `shadow-code-audit-<id>.json` | Complete machine-readable audit report payload including enriched findings, scanner metrics, and pull request metadata. |
+
+---
+
+## 10. REST API Reference
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/health` | Service health status, MongoDB ping latency, and scanner availability |
+| `GET` | `/api/dashboard` | Dashboard metrics, severity breakdown, and health score |
+| `GET` | `/api/repositories` | List monitored repositories with pagination (`limit`, `skip`) |
+| `POST` | `/api/repositories` | Register a new repository for auditing |
+| `POST` | `/api/scans` | Launch an authorized static security audit scan |
+| `GET` | `/api/scans` | Retrieve scan execution history with pagination |
+| `GET` | `/api/scans/{scan_id}` | Retrieve specific scan details |
+| `GET` | `/api/scans/{scan_id}/findings` | Retrieve all normalized findings for a scan |
+| `GET` | `/api/findings` | Filterable findings list (`severity`, `repository_id`, `status`) |
+| `GET` | `/api/findings/{id}` | Inspect individual vulnerability finding |
+| `POST` | `/api/findings/{id}/analyze` | Trigger contextual AI threat reasoning |
+| `POST` | `/api/findings/{id}/remediate` | Propose minimal diff patch & regression test |
+| `POST` | `/api/remediations/{id}/validate` | Run sandbox AST syntax and re-scan validation |
+| `POST` | `/api/remediations/{id}/create-pr` | Stage dedicated branch and open GitHub PR |
+| `GET` | `/api/pull-requests` | List staged and active Pull Requests |
+| `POST` | `/api/chat` | Query the grounded security chatbot |
+| `GET` | `/api/analytics/trends` | Vulnerability trend metrics over time |
+| `GET` | `/api/reports/{scan_id}` | JSON preview of audit report |
+| `GET` | `/api/reports/{scan_id}/download` | Download report file (`format=pdf`, `csv`, or `json`) |
+| `POST` | `/api/webhook/github` | GitHub webhook handler with HMAC-SHA256 verification |
+
+---
+
+## 11. Production Deployment Guide
+
+Shadow-Code is designed for zero-friction containerized or cloud deployment.
+
+### Option A: Docker (Recommended for Single-Host or VPS)
+Build and run the entire unified full-stack application (React UI + FastAPI + Scanners):
+
+```bash
+# 1. Build unified production image
+docker build -t shadow-code .
+
+# 2. Run container (with your .env file)
+docker run -d -p 8000:8000 --env-file backend/.env --name shadow-code shadow-code
+```
+Access the application at `http://localhost:8000`.
+
+### Option B: Docker Compose (App + Local MongoDB)
+Run the application with an isolated, persistent local MongoDB database:
+
+```bash
+docker compose up -d --build
+```
+
+### Option C: Cloud PaaS Deployment (Render / Railway / Fly.io)
+The repository includes a ready-to-use `render.yaml` blueprint and `Procfile`.
+1. Fork or push this repository to GitHub.
+2. In **Render** (or **Railway**), create a new **Web Service** connected to your repository.
+3. Set Environment to `Python 3`.
+4. Build command:
+   ```bash
+   pip install -r backend/requirements.txt && cd frontend && npm install && npm run build && cd ..
+   ```
+5. Start command:
+   ```bash
+   uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+   ```
+6. Add your environment secrets (`GEMINI_API_KEY`, `MONGODB_URI`, `GITHUB_TOKEN`).
+
+### Option D: Split Deployment (Vercel Frontend + Cloud Backend)
+- **Frontend (Vercel)**: Connect repository to Vercel (uses included `vercel.json`). Set `VITE_API_URL` to your deployed backend URL.
+- **Backend (Render / Railway)**: Deploy backend and set `CORS_ORIGINS` to your Vercel domain.
+
+---
+
+## 12. Security Policies & Guardrails
+
+1. **Human-in-the-Loop Sign-off**: No patch is ever merged automatically. Every proposed fix requires developer or security engineer approval.
+2. **Untrusted Code Isolation**: Patches are executed in isolated temporary scratch directories with resource limits and timeouts.
+3. **Secret Redaction**: Credentials, tokens, and API keys are automatically scrubbed from logs and reports using regex pattern matching.
+4. **Prompt Injection Defense**: Code comments containing instruction-override triggers are flagged and neutralized before LLM processing.
+5. **HMAC Webhook Signatures**: All incoming GitHub webhooks are verified against `X-Hub-Signature-256`.
+
+---
+
+## 13. License
+This project is licensed under the MIT License.

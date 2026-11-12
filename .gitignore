@@ -20,6 +20,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.venv/
 venv/
 ENV/
 backend/venv/
@@ -28,6 +29,8 @@ backend/*/__pycache__/
 *.sqlite3
 *.db
 .pytest_cache/
+reports/
+evaluation/results/
 
 # Node
 node_modules/
@@ -42,10 +45,10 @@ frontend/.vite/
 
 # Environment variables & secrets
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+backend/.env
+backend/.env.*
+*.env
 
 # IDE
 .idea/
