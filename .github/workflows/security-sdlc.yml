@@ -32,7 +32,7 @@ jobs:
       - name: Install Security Scanners & Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install semgrep bandit pytest httpx pydantic mongomock pygithub
+          pip install semgrep bandit -r backend/requirements.txt
 
       - name: Run Bandit AST Security Analysis
         id: bandit_scan
@@ -50,11 +50,11 @@ jobs:
 
       - name: Execute Automated Shadow-Code Tests
         run: |
-          pytest backend/tests/test_api.py -v
+          PYTHONPATH=. pytest backend/tests/test_api.py -v
 
       - name: Run Empirical Evaluation Harness
         run: |
-          python evaluation/run_eval.py
+          PYTHONPATH=. python evaluation/run_eval.py
 
       - name: Upload Security Audit & Evaluation Artifacts
         uses: actions/upload-artifact@v4
