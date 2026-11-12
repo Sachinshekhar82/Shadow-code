@@ -19,12 +19,12 @@ jobs:
 
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Set up Python 3.11
-        uses: actions/setup-python@0a5c61591373683505ea898e09a6ea86e8b16631 # v5.0.0
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
@@ -57,7 +57,7 @@ jobs:
           python evaluation/run_eval.py
 
       - name: Upload Security Audit & Evaluation Artifacts
-        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+        uses: actions/upload-artifact@v4
         with:
           name: shadow-code-security-reports
           path: |
